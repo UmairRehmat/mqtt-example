@@ -1,7 +1,7 @@
 import { StatusBar } from 'expo-status-bar';
 import React,{Component} from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
-import { TouchableOpacity } from 'react-native-gesture-handler';
+import { TextInput, TouchableOpacity } from 'react-native-gesture-handler';
 import MQTT from 'sp-react-native-mqtt';
 
 
@@ -12,7 +12,9 @@ export default class App extends Component {
        isConencting:false,
        isConnected:false,
        message:"",
+       sendMessage: "",
        isError:false,
+        client:null,
     }
 }
   onConnectPress =()=>{
@@ -23,59 +25,81 @@ export default class App extends Component {
       isError:false,
     })
     MQTT.createClient({
-      uri: 'mqtt://patrioot.senarios.co:8883',
+      uri: 'mqtt://patrioot.senarios.co:1883',
       clientId: 'hgfghvghjhjjvjcj',
       user:"sammy",
       // port:8883,
       // host:"patrioot.senarios.co",
       pass:"1234",
-      // auth:true,
-      tls:true,
+      auth:true,
+      // tls:true,
       keepalive:1,
     }).then(function(client) {
     
       client.on('closed', function() {
-        contextV.updateConnectingStatus("",false)
+        contextV.updateConnectingStatus("",false,false,null)
         console.log('mqtt.event.closed');
       });
     
       client.on('error', function(msg) {
-       contextV. updateConnectingStatus(msg,true)
+       contextV. updateConnectingStatus(msg,true,false,null)
         console.log('mqtt.event.error', msg);
       });
     
       client.on('message', function(msg) {
-        contextV. updateConnectingStatus(msg,false)
+        // var JsonData = JSON.parse(msg);
+        contextV. updateConnectingStatus(msg.data,false,true,client)
         console.log('mqtt.event.message', msg);
       });
     
       client.on('connect', function() {
-        contextV.updateConnectingStatus("",false)
+        contextV.updateConnectingStatus("",false,true,client)
         console.log('connected');
-        client.subscribe('test', 0);
-        client.publish('test', "test", 0, false);
+        client.subscribe('test', 1);
       });
     
       client.connect();
     }).catch(function(err){
-      contextV.updateConnectingStatus(err,false)
+      contextV.updateConnectingStatus(err,false,false,null)
       console.log("mqqt checking error",err);
     });
   }
-  updateConnectingStatus=(msg,isError)=>{
+  updateConnectingStatus=(msg,isError,isConnected,client)=>{
     this.setState({
       isConencting :false,
-      isConnected:true,
-      message:msg==undefined?"":msg,
+      isConnected:isConnected,
+      message:msg==undefined?"":this.state.message+msg,
       isError :isError,
+      client:client
     })
+  }
+  onMessageChange = (text) => {
+    this.setState({sendMessage: text});
+  };
+  onSendClick=()=>{
+    // this.state.client.isConnected
+    this.state.client.publish('test', this.state.sendMessage, 1, false);
   }
   render(){
     return (
       <View style={styles.container}>
         {this.state.isConnected&&!this.state.isConencting&&
-        <Text>{this.state.message}</Text>}
-       {(!this.state.isConencting || this.state.isError)&&
+        <View style={{width:"80%"}}>
+          <Text>{this.state.message}</Text>
+          <TextInput
+                  style={styles.editText}
+                  onChangeText={(text) => this.onMessageChange(text)}
+                  returnKeyType="done"
+                  value={this.state.sendMessage}
+                  placeholder={"Type Message"
+                  }/>
+                   <TouchableOpacity style={{ width: '52%', alignSelf: 'center',marginTop:"15%" }} onPress={() => this.onSendClick()}>
+                                  <View style={styles.button}>
+                                      <Text style={{ color: '#fff',  fontSize:16 }}>Send</Text>
+                                  </View>
+                              </TouchableOpacity>
+          </View>}
+       {((!this.state.isConencting || this.state.isError)&&!this.state.isConnected)&&
         <TouchableOpacity style={{ width: '92%', alignSelf: 'center' }} onPress={() => this.onConnectPress()}>
                                   <View style={styles.button}>
                                       <Text style={{ color: '#fff',  fontSize:16 }}>Connect</Text>
@@ -94,6 +118,7 @@ export default class App extends Component {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    width:"100%",
     backgroundColor: '#fff',
     alignItems: 'center',
     justifyContent: 'center',
@@ -106,5 +131,13 @@ const styles = StyleSheet.create({
     padding:20,
     justifyContent: 'center',
     alignItems: 'center'
+},
+editText: {
+  marginTop: 40,
+  height: 50,
+  fontSize: 16,
+  width:"100%",
+  borderColor: 'gray',
+  borderBottomWidth: 1,
 },
 });
