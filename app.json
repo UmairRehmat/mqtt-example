@@ -1,0 +1,12 @@
+{
+  "name": "mqqt-demo",
+  "displayName": "mqqt-demo",
+  "expo": {
+    "name": "mqqt-demo",
+    "slug": "mqqt-demo",
+    "version": "1.0.0",
+    "assetBundlePatterns": [
+      "**/*"
+    ]
+  }
+}
